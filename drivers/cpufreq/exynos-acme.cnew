@@ -1065,9 +1065,6 @@ void sec_bootstat_get_cpuinfo(int *freq, int *online)
 /*********************************************************************
  *                  INITIALIZE EXYNOS CPUFREQ DRIVER                 *
  *********************************************************************/
-
-static int cpu_undervolt = 25000;
-
 static void print_domain_info(struct exynos_cpufreq_domain *domain)
 {
 	int i;
@@ -1136,9 +1133,6 @@ static __init int init_table(struct exynos_cpufreq_domain *domain)
 
 	for (index = 0; index < domain->table_size; index++) {
 		domain->freq_table[index].driver_data = index;
-
-		/* Undervolt with uV value */
-		volt_table[index] -= cpu_undervolt;
 
 		if (table[index] > domain->max_freq)
 			domain->freq_table[index].frequency = CPUFREQ_ENTRY_INVALID;
@@ -1376,9 +1370,11 @@ static int init_dm(struct exynos_cpufreq_domain *domain,
 	return register_exynos_dm_freq_scaler(domain->dm_type, dm_scaler);
 }
 
+
+
 /*physwizz underclocking*/
-/*Underclocking little cores to 130MHz*/
-static unsigned long arg_cpu_min_c1 = 130000;
+/*Underclocking little cores to 208MHz*/
+static unsigned long arg_cpu_min_c1 = 208000; 
 static int __init cpufreq_read_cpu_min_c1(char *cpu_min_c1) /*integer remains in memory after function call*/
 {
 	unsigned long ui_khz;
@@ -1389,13 +1385,13 @@ static int __init cpufreq_read_cpu_min_c1(char *cpu_min_c1) /*integer remains in
 		return -EINVAL;
 
 	arg_cpu_min_c1 = ui_khz;
-	printk("cpu_min_c1=%lu\n", arg_cpu_min_c1);
+	printk("cpu_min_c1=%lu\n", arg_cpu_min_c1); 
 	return ret;
 }
 __setup("cpu_min_c1=", cpufreq_read_cpu_min_c1);
 
-/*Underclocking big cores to 130MHz*/
-unsigned long arg_cpu_min_c2 = 130000;
+/*Underclocking big cores to 208MHz*/
+unsigned long arg_cpu_min_c2 = 208000; 
 
 static __init int cpufreq_read_cpu_min_c2(char *cpu_min_c2)
 {
@@ -1414,8 +1410,8 @@ __setup("cpu_min_c2=", cpufreq_read_cpu_min_c2);
 
 
 /*Chatur, Carlos Burero & physwizz*/
-/*Overclocking little cores to 2.2GHz*/
-static unsigned long arg_cpu_max_c1 = 2210000; /*max_cpu_freq=2.2 GHz for little cores*/
+/*Overclocking little cores from 1.35GHz to 1.69GHz*/
+static unsigned long arg_cpu_max_c1 = 1690000; /*max_cpu_freq=1.69 GHz for little cores*/
 
 static int __init cpufreq_read_cpu_max_c1(char *cpu_max_c1) /*integer remains in memory after function call*/
 {
@@ -1427,13 +1423,13 @@ static int __init cpufreq_read_cpu_max_c1(char *cpu_max_c1) /*integer remains in
 		return -EINVAL;
 
 	arg_cpu_max_c1 = ui_khz;
-	printk("cpu_max_c1=%lu\n", arg_cpu_max_c1);
+	printk("cpu_max_c1=%lu\n", arg_cpu_max_c1); 
 	return ret;
 }
 __setup("cpu_max_c1=", cpufreq_read_cpu_max_c1);
 
-/*Overclocking big cores to 2.2GHz*/
-unsigned long arg_cpu_max_c2 = 2210000; /*max_cpu_freq=2.2 GHz*/
+/*Overclocking big cores from 1.56GHz to 2.08GHz*/
+unsigned long arg_cpu_max_c2 = 2184000; /*max_cpu_freq=2.08 GHz*/
 
 static __init int cpufreq_read_cpu_max_c2(char *cpu_max_c2)
 {
@@ -1449,6 +1445,12 @@ static __init int cpufreq_read_cpu_max_c2(char *cpu_max_c2)
 	return ret;
 }
 __setup("cpu_max_c2=", cpufreq_read_cpu_max_c2);
+
+
+
+
+
+
 
 static __init void init_slack_timer(struct exynos_cpufreq_domain *domain,
 		struct device_node *dn)
@@ -1502,14 +1504,6 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 	if (!of_property_read_u32(dn, "min-freq", &val))
 		domain->min_freq = max(domain->min_freq, val);
 
-	if (domain->id == 0) {
- 		domain->max_freq = arg_cpu_max_c1;
- 		domain->min_freq = arg_cpu_min_c1;
- 	} else if (domain->id == 1) {
- 		domain->max_freq = arg_cpu_max_c2;
- 		domain->min_freq = arg_cpu_min_c2;
- 	}
-
 	/* If this domain has boost freq, change max */
 	val = exynos_pstate_get_boost_freq(cpumask_first(&domain->cpus));
 	if (val > domain->max_freq)
@@ -1517,6 +1511,24 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 
 	if (of_property_read_bool(dn, "need-awake"))
 		domain->need_awake = true;
+
+ /*id==0 for little  id==1 for big*/
+
+	if (domain->id == 0) {
+		domain->max_freq = arg_cpu_max_c1;
+		domain->min_freq = arg_cpu_min_c1;
+	} else if (domain->id == 1) {
+		domain->max_freq = arg_cpu_max_c2;
+		domain->min_freq = arg_cpu_min_c2;
+	}
+
+	/* Default QoS for user */
+	if (!of_property_read_u32(dn, "user-default-qos", &val))
+		domain->user_default_qos = val;
+
+
+
+
 
 	domain->boot_freq = cal_dfs_get_boot_freq(domain->cal_id);
 	domain->resume_freq = cal_dfs_get_resume_freq(domain->cal_id);
