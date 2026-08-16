@@ -2174,7 +2174,6 @@
 
 						LDO28 {
 							regulator-name = "vdd_ldo28";
-				            regulator-always-on;
 							regulator-min-microvolt = <0x186a00>;
 							regulator-max-microvolt = <0x1dc130>;
 							regulator-boot-on;
